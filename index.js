@@ -4,7 +4,7 @@ require("dotenv").config();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.port || 5000;
 
 //MiddleWare
@@ -29,6 +29,8 @@ const client = new MongoClient(uri, {
 });
 
 const usersCollection = client.db("HouseHunter").collection("users");
+const houseCollection = client.db("HouseHunter").collection("houses");
+const bookingCollection = client.db("HouseHunter").collection("bookingList");
 
 app.post("/register", async (req, res) => {
   const data = req.body;
@@ -102,6 +104,71 @@ app.get("/user", async (req, res) => {
 
 app.post("/auth/logout", async (req, res) => {
   res.clearCookie("token").send({ success: true });
+});
+app.post("/add-new-house", async (req, res) => {
+  const data = req.body;
+  const result = await houseCollection.insertOne(data);
+  res.send(result);
+});
+app.patch("/update-house/:id", async (req, res) => {
+  const id = req.params.id;
+  const data = req.body;
+  const query = { _id: new ObjectId(id) };
+  const options = { upsert: true };
+  console.log({ ...data });
+
+  const updatedHouse = {
+    $set: {
+      ...data,
+    },
+  };
+  const result = await houseCollection.updateOne(query, updatedHouse, options);
+  res.send(result);
+});
+app.get("/list-of-houses/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { email };
+  const result = await houseCollection.find(query).toArray();
+  res.send(result);
+});
+app.delete("/house/delete/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await houseCollection.deleteOne(query);
+  res.send(result);
+});
+
+app.get("/houses-count", async (req, res) => {
+  const count = await houseCollection.estimatedDocumentCount();
+  res.send({ count });
+});
+app.get("/house-details/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await houseCollection.findOne(query);
+  res.send(result);
+});
+app.get("/all-houses", async (req, res) => {
+  const page = parseInt(req.query.page);
+  const size = parseInt(req.query.size);
+  const houses = await houseCollection
+    .find()
+    .skip(page * size)
+    .limit(size)
+    .toArray();
+  res.send(houses);
+});
+app.post("/add-booking", async (req, res) => {
+  const data = req.body;
+  const result = await bookingCollection.insertOne(data);
+
+  res.send(result);
+});
+app.get("/my-bookings/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { email };
+  const result = await bookingCollection.find(query).toArray();
+  res.send(result);
 });
 
 async function run() {
