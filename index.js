@@ -160,14 +160,25 @@ app.get("/all-houses", async (req, res) => {
 });
 app.post("/add-booking", async (req, res) => {
   const data = req.body;
-  const result = await bookingCollection.insertOne(data);
-
-  res.send(result);
+  const query = { email: data.email };
+  const count = await bookingCollection.find(query).toArray();
+  if (count.length < 2) {
+    const result = await bookingCollection.insertOne(data);
+    res.send(result);
+  } else {
+    res.status(429).send("You can't book more than two.");
+  }
 });
 app.get("/my-bookings/:email", async (req, res) => {
   const email = req.params.email;
   const query = { email };
   const result = await bookingCollection.find(query).toArray();
+  res.send(result);
+});
+app.delete("/booking/cancel/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await bookingCollection.deleteOne(query);
   res.send(result);
 });
 
