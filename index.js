@@ -2,11 +2,14 @@ const express = require("express");
 const app = express();
 require("dotenv").config();
 const cors = require("cors");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const port = process.env.port || 5000;
 
 //MiddleWare
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
     origin: ["https://techfirmit.web.app", "http://localhost:5173"],
@@ -38,8 +41,45 @@ app.post("/register", async (req, res) => {
     res.status(409).send("Email already used");
   } else {
     const result = await usersCollection.insertOne(data);
+    const token = jwt.sign({ email }, process.env.SECRETE, {
+      expiresIn: "365days",
+    });
+    console.log(token);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
     res.send(result);
   }
+});
+app.get("/user", async (req, res) => {
+  const { token } = req.cookies;
+  //   if client does not send token
+  if (!token) {
+    return res.send(null);
+  }
+  jwt.verify(token, process.env.SECRETE, async function (err, decoded) {
+    if (err) {
+      return res.send(null);
+    }
+    // attach decoded user so that others can get it
+    const { email } = decoded;
+    const query = { email };
+    const user = await usersCollection.findOne(query, {
+      projection: { password: 0 },
+    });
+    if (user) {
+      res.send(user);
+    } else {
+      res.send(null);
+    }
+  });
+});
+
+app.post("/auth/logout", async (req, res) => {
+  const user = req.body;
+  res.clearCookie("token").send({ success: true });
 });
 
 async function run() {
