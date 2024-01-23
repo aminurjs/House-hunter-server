@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["https://techfirmit.web.app", "http://localhost:5173"],
+    origin: ["https://glossy-stage.surge.sh", "http://localhost:5173"],
     credentials: true,
   })
 );
@@ -102,7 +102,7 @@ app.get("/user", async (req, res) => {
   });
 });
 
-app.post("/auth/logout", async (req, res) => {
+app.get("/auth/logout", async (req, res) => {
   res.clearCookie("token").send({ success: true });
 });
 app.post("/add-new-house", async (req, res) => {
