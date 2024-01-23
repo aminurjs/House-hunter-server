@@ -53,6 +53,29 @@ app.post("/register", async (req, res) => {
     res.send(result);
   }
 });
+
+app.post("/login", async (req, res) => {
+  const user = req.body;
+  const { email } = user;
+  const result = await usersCollection.findOne(user, {
+    projection: { password: 0 },
+  });
+  if (!result) {
+    res.status(401).send("Email/Password not Match");
+  } else {
+    const token = jwt.sign({ email }, process.env.SECRETE, {
+      expiresIn: "365days",
+    });
+    console.log(token);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+    res.status(200).send("Login successful");
+  }
+});
+
 app.get("/user", async (req, res) => {
   const { token } = req.cookies;
   //   if client does not send token
@@ -78,7 +101,6 @@ app.get("/user", async (req, res) => {
 });
 
 app.post("/auth/logout", async (req, res) => {
-  const user = req.body;
   res.clearCookie("token").send({ success: true });
 });
 
